@@ -4,19 +4,28 @@ const redis = require('redis');
 
 const FIVE_MINUTES = 5 * 60;
 
+function pick(object, ...keys) {
+  let pickedObject = {};
+  keys.forEach(key => {
+    pickedObject[key] = object[key];
+    delete object[key];
+  });
+  return pickedObject;
+}
+
 class RedisCache {
   constructor(options) {
-    let client = this.client = redis.createClient({
-      host: options.host,
-      port: options.port
-    });
+    let cacheOptions = pick(options, 'expiration', 'cacheKey', 'skipCache');
 
-    this.expiration = options.expiration || FIVE_MINUTES;
+    this.client = redis.createClient(options);
+
+    this.expiration = cacheOptions.expiration || FIVE_MINUTES;
     this.connected = false;
-    this.cacheKey = typeof options.cacheKey === 'function' ?
+    this.cacheKey = typeof cacheOptions.cacheKey === 'function' ?
       options.cacheKey : (path) => path;
+    this.skipCache = cacheOptions.skipCache || (() => false);
 
-    client.on('error', error => {
+    this.client.on('error', error => {
       this.ui.writeLine(`redis error; err=${error}`);
     });
 
@@ -33,6 +42,10 @@ class RedisCache {
 
   fetch(path, request) {
     if (!this.connected) { return; }
+
+    if (this.skipCache(path, request)) {
+      return Promise.reject(new Error('Cache skipped'));
+    }
 
     let key = this.cacheKey(path, request);
 
@@ -54,11 +67,7 @@ class RedisCache {
     let key = this.cacheKey(path, request);
 
     return new Promise((res, rej) => {
-      let statusCode = response && response.statusCode;
-      let statusCodeStr = statusCode && (statusCode + '');
-
-      if (statusCodeStr && statusCodeStr.length &&
-         (statusCodeStr.charAt(0) === '4' || statusCodeStr.charAt(0) === '5' || statusCodeStr.charAt(0) === '3')) {
+      if (response && response.statusCode >= 300) {
         res();
         return;
       }

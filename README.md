@@ -5,7 +5,7 @@ cluster to cache the results of rendered FastBoot pages.
 
 [app-server]: https://github.com/ember-fastboot/fastboot-app-server
 
-To use the cache, configure it with a Redis host and/or port:
+To use the cache, configure it with any [node_redis options](https://github.com/NodeRedis/node_redis#rediscreateclient):
 
 ```js
 const FastBootAppServer = require('fastboot-app-server');
@@ -37,7 +37,7 @@ let cache = new RedisCache({
 ```
 
 Additionally, if you would like your cache key to vary based on
-information in the request (like headers), you can 
+information in the request (like headers), you can
 provide a `cacheKey(path, request)` function that takes in as
 parameters the path being requested and the request object.
 
