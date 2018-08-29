@@ -15,7 +15,7 @@ function pick(object, ...keys) {
 
 class RedisCache {
   constructor(options) {
-    let cacheOptions = pick(options, 'expiration', 'cacheKey');
+    let cacheOptions = pick(options, 'expiration', 'cacheKey', 'skipCache');
 
     this.client = redis.createClient(options);
 
@@ -23,6 +23,7 @@ class RedisCache {
     this.connected = false;
     this.cacheKey = typeof cacheOptions.cacheKey === 'function' ?
       options.cacheKey : (path) => path;
+    this.skipCache = cacheOptions.skipCache || (() => false);
 
     this.client.on('error', error => {
       this.ui.writeLine(`redis error; err=${error}`);
@@ -41,6 +42,10 @@ class RedisCache {
 
   fetch(path, request) {
     if (!this.connected) { return; }
+
+    if (this.skipCache(path, request)) {
+      return Promise.reject(new Error('Cache skipped'));
+    }
 
     let key = this.cacheKey(path, request);
 
