@@ -52,6 +52,8 @@ class RedisCache {
   fetch(path, request) {
     if (!this.connected) { return; }
 
+    path = this.addTrailingSlash(path);
+
     if (this.skipCache(path, request)) {
       return Promise.reject(new Error('Cache skipped'));
     }
@@ -71,6 +73,8 @@ class RedisCache {
 
   put(path, body, response) {
     if (!this.connected) { return; }
+
+    path = this.addTrailingSlash(path);
 
     let request = response && response.req;
     let key = this.cacheKey(path, request);
@@ -93,6 +97,12 @@ class RedisCache {
           }
         });
     });
+  }
+
+  addTrailingSlash(path) {
+    let lastChar = path.substr(-1);
+    if (lastChar !== '/') path = path + '/';
+    return path;
   }
 }
 
