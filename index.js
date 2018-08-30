@@ -22,7 +22,7 @@ class RedisCache {
     this.expiration = cacheOptions.expiration || FIVE_MINUTES;
     this.connected = false;
     this.cacheKey = typeof cacheOptions.cacheKey === 'function' ?
-      options.cacheKey : (path) => path;
+      cacheOptions.cacheKey : (path) => path;
     this.skipCache = cacheOptions.skipCache || (() => false);
 
     this.client.on('error', error => {
