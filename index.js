@@ -18,11 +18,20 @@ class RedisCache {
     let cacheOptions = pick(options, 'expiration', 'cacheKey', 'skipCache');
 
     this.client = redis.createClient(options);
-
-    this.expiration = cacheOptions.expiration || FIVE_MINUTES;
     this.connected = false;
-    this.cacheKey = typeof cacheOptions.cacheKey === 'function' ?
-      cacheOptions.cacheKey : (path) => path;
+
+    if (typeof cacheOptions.expiration === 'function') {
+      this.expiration = cacheOptions.expiration;
+    } else {
+      this.expiration = () => (cacheOptions.expiration || FIVE_MINUTES);
+    }
+
+    if (typeof cacheOptions.cacheKey === 'function') {
+      this.cacheKey = cacheOptions.cacheKey;
+    } else {
+      this.cacheKey = (path) => path;
+    }
+
     this.skipCache = cacheOptions.skipCache || (() => false);
 
     this.client.on('error', error => {
@@ -65,6 +74,7 @@ class RedisCache {
 
     let request = response && response.req;
     let key = this.cacheKey(path, request);
+    let expiration = this.expiration(path, request);
 
     return new Promise((res, rej) => {
       if (response && response.statusCode >= 300) {
@@ -74,7 +84,7 @@ class RedisCache {
 
       this.client.multi()
         .set(key, body)
-        .expire(key, this.expiration)
+        .expire(key, expiration)
         .exec(err => {
           if (err) {
             rej(err);
