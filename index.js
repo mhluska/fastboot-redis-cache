@@ -15,7 +15,7 @@ function pick(object, ...keys) {
 
 class RedisCache {
   constructor(options) {
-    let cacheOptions = pick(options, 'expiration', 'cacheKey', 'skipCache');
+    let cacheOptions = pick(options, 'expiration', 'cacheKey', 'cacheBody', 'skipCache');
 
     this.client = redis.createClient(options);
     this.connected = false;
@@ -32,6 +32,7 @@ class RedisCache {
       this.cacheKey = (path) => path;
     }
 
+    this.cacheBody = cacheOptions.cacheBody || (body => body);
     this.skipCache = cacheOptions.skipCache || (() => false);
 
     this.client.on('error', error => {
@@ -87,7 +88,7 @@ class RedisCache {
       }
 
       this.client.multi()
-        .set(key, body)
+        .set(key, this.cacheBody(body))
         .expire(key, expiration)
         .exec(err => {
           if (err) {
